@@ -1,0 +1,15 @@
+{
+  "name": "campus-checkin",
+  "version": "1.0.0",
+  "description": "校园活动签到：大屏、扫码终端、Web 工作台与不可变签到事件账本",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test test/"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT"
+}

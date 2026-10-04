@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>校园签到终端</title>
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body class="terminal-page">
+  <main class="terminal-shell">
+    <section class="card">
+      <p class="eyebrow">Scanner</p>
+      <h1>签到终端</h1>
+      <div class="form-row">
+        <label>设备
+          <select id="deviceId"><option value="dev-gate-a">东门 A</option><option value="dev-gate-b">东门 B</option></select>
+        </label>
+        <button id="goOffline" type="button" class="secondary">切换离线</button>
+      </div>
+      <div class="form-row">
+        <label>当前场次
+          <select id="sessionId"></select>
+        </label>
+        <span id="netState" class="pill">连接中</span>
+      </div>
+      <div class="ticket-box">
+        <label>票据令牌（演示中由工作台签发）
+          <textarea id="ticketToken" rows="3" placeholder="粘贴离线票据 token"></textarea>
+        </label>
+      </div>
+      <div class="form-row">
+        <input id="manualPerson" placeholder="也可输入 p-001 后模拟扫码">
+        <button id="issueTicket" type="button" class="secondary">为该生签发票据</button>
+      </div>
+      <button id="scanBtn" class="primary big">扫码入场</button>
+      <p id="scanResult" class="result" role="status"></p>
+    </section>
+    <aside class="card">
+      <h2>队列与人数</h2>
+      <div class="stats"><div><strong id="serverConfirmed">--</strong><span>确认</span></div><div><strong id="tentativeCount">0</strong><span>暂定</span></div><div><strong id="queueCount">0</strong><span>待同步</span></div></div>
+      <ul id="queueList" class="queue"></ul>
+      <button id="syncNow" class="secondary">立即合并队列</button>
+      <h3>最近响应</h3>
+      <pre id="serverLog" class="log"></pre>
+    </aside>
+  </main>
+  <script src="/js/terminal.js" type="module"></script>
+</body>
+</html>

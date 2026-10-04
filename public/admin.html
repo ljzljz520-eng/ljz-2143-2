@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>校园签到 Web 工作台</title>
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+  <main class="admin-shell">
+    <header class="admin-top card">
+      <div><p class="eyebrow">Workbench</p><h1>场次与签到管理</h1><p id="revision" class="muted"></p></div>
+      <button id="recompute" class="secondary">重算人数</button>
+    </header>
+    <nav class="tabs" role="tablist">
+      <button data-tab="sessions" class="active">场次</button><button data-tab="conflicts">冲突处置</button><button data-tab="events">事件审计</button><button data-tab="publish">发布大屏</button>
+    </nav>
+    <section id="tab-sessions" class="tab-panel active">
+      <div class="grid-2">
+        <div class="card"><h2>场次人数</h2><div id="sessionList"></div><div class="device-sync"><h3>设备同步进度</h3><div id="deviceSync"></div></div></div>
+        <div class="card"><h2>新增场次</h2>
+          <div class="form-grid"><label>活动 ID<input id="newActivity" value="act-campus-festival"></label><label>名称<input id="newName" placeholder="例如：闭幕晚会"></label><label>开始<input id="newStart" type="datetime-local"></label><label>结束<input id="newEnd" type="datetime-local"></label><label>参与人 ID（逗号分隔）<input id="newPeople" value="p-001,p-002"></label></div>
+          <button id="createSession" class="primary">创建场次</button>
+          <h3>补授参与资格</h3>
+          <div class="form-grid"><label>场次 ID<input id="grantSession"></label><label>人员 ID<input id="grantPerson" placeholder="p-004"></label></div>
+          <button id="grantBtn" class="secondary">授予资格</button>
+          <h3>补签 / 撤销</h3>
+          <div class="form-grid"><label>场次 ID<input id="attSession"></label><label>人员 ID<input id="attPerson" placeholder="p-001"></label></div>
+          <div class="actions"><button id="manualBtn" class="secondary">人工补签</button><button id="revokeBtn" class="danger">撤销有效签到</button></div>
+        </div>
+      </div>
+    </section>
+    <section id="tab-conflicts" class="tab-panel"><div class="card"><h2>离线 / 撤销冲突</h2><p class="muted">接受会生成新的独立事件；替换会先生成 REVOKE，再生成 MANUAL_CHECKIN；丢弃仅关闭暂存项。</p><div id="conflictList"></div></div></section>
+    <section id="tab-events" class="tab-panel"><div class="card"><h2>不可变事件</h2><div id="eventList" class="table"></div></div></section>
+    <section id="tab-publish" class="tab-panel"><div class="grid-2"><div class="card"><h2>发布主视觉</h2><div class="form-grid"><label>场次 ID<input id="pubSession"></label><label>标题<input id="pubTitle" value="校园创新文化节"></label><label>副标题<input id="pubSubtitle" value="欢迎入场"></label><label>图片 URL<input id="pubVisual" value="/assets/visual-default.svg"></label><label>屏幕旋转<select id="pubRotation"><option>0</option><option>90</option><option>180</option><option>270</option></select></label><label>主题<select id="pubTheme"><option value="dark">深蓝</option><option value="light">浅色</option><option value="festive">节庆</option></select></label></div><button id="publishBtn" class="primary">原子发布到 C 大屏</button><p id="adminMessage" class="result"></p></div><div class="card"><h2>给终端签发离线票据</h2><div class="form-grid"><label>场次 ID<input id="ticketSession"></label><label>人员 ID<input id="ticketPerson" placeholder="p-001"></label><label>有效分钟<input id="ticketTtl" type="number" value="120"></label></div><button id="ticketBtn" class="secondary">签发票据</button><pre id="ticketResult" class="log"></pre></div></div></section>
+  </main>
+  <script src="/js/admin.js" type="module"></script>
+</body>
+</html>

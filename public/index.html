@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>校园活动签到系统</title>
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body class="home">
+  <main class="hero card">
+    <p class="eyebrow">Campus Check-in</p>
+    <h1>校园活动签到系统</h1>
+    <p class="lead">不可变签到事件、在线强一致确认、离线票据暂存合并、大屏原子切换。</p>
+    <div class="entry-grid">
+      <a class="entry" href="/screen.html"><strong>C 大屏</strong><span>主视觉与确认人数</span></a>
+      <a class="entry" href="/terminal.html"><strong>签到终端</strong><span>在线扫码 / 离线队列</span></a>
+      <a class="entry" href="/admin.html"><strong>Web 工作台</strong><span>场次、撤销、冲突与发布</span></a>
+    </div>
+    <section class="strategy">
+      <h2>一致性策略</h2>
+      <p>采用<strong>服务端在线强一致为主、离线票据仅本地暂存</strong>的混合方案。在线请求在服务端串行事务内完成事件追加、资格校验、计数重放和持久化；离线时票据限定活动、场次和有效期，终端只显示暂定人数，恢复网络后整批合并，冲突由工作台处置，绝不把旧场次扫描自动并入新场次。</p>
+    </section>
+  </main>
+</body>
+</html>

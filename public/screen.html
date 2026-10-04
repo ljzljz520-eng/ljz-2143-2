@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>校园活动 C 大屏</title>
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body class="screen-page" id="screenBody">
+  <div id="visualLayer" class="visual-layer" aria-hidden="true"></div>
+  <main class="screen-card" aria-live="polite">
+    <header class="screen-head">
+      <p class="eyebrow">CURRENT SESSION</p>
+      <h1 id="screenActivity">等待发布</h1>
+      <h2 id="screenSession">当前场次将与人数原子切换</h2>
+    </header>
+    <section class="screen-counts">
+      <div class="confirmed-number"><span id="confirmedCount">--</span><small>确认人数</small></div>
+      <div class="eligible-number tentative-number"><span id="tentativeCount">--</span><small>暂定/待裁决</small></div>
+      <div class="eligible-number"><span id="eligibleCount">--</span><small>参与资格</small></div>
+    </section>
+    <p id="screenSubtitle" class="screen-subtitle"></p>
+    <p id="screenMeta" class="screen-meta">连接中…</p>
+  </main>
+  <script src="/js/screen.js" type="module"></script>
+</body>
+</html>

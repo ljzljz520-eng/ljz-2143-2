@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-label="校园创新文化节主视觉">
+  <defs>
+    <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#0f3b87"/>
+      <stop offset="0.55" stop-color="#1d6fe0"/>
+      <stop offset="1" stop-color="#42d6c5"/>
+    </linearGradient>
+    <radialGradient id="r" cx="78%" cy="18%" r="55%">
+      <stop offset="0" stop-color="#fff6a8" stop-opacity=".95"/>
+      <stop offset=".35" stop-color="#ffb84d" stop-opacity=".35"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#g)"/>
+  <rect width="1600" height="900" fill="url(#r)"/>
+  <g opacity=".18" fill="none" stroke="#ffffff" stroke-width="3">
+    <circle cx="180" cy="720" r="170"/>
+    <circle cx="1420" cy="190" r="240"/>
+    <path d="M0 610 C230 520 360 720 610 620 S1040 520 1250 660 1460 760 1600 700"/>
+  </g>
+  <g fill="#ffffff" opacity=".92">
+    <circle cx="240" cy="210" r="10"/>
+    <circle cx="1280" cy="690" r="8"/>
+    <circle cx="980" cy="130" r="6"/>
+    <circle cx="520" cy="740" r="7"/>
+  </g>
+  <text x="150" y="390" fill="#ffffff" font-family="system-ui, sans-serif" font-size="92" font-weight="800">校园创新文化节</text>
+  <text x="154" y="475" fill="#e8f4ff" font-family="system-ui, sans-serif" font-size="38" opacity=".95">CAMPUS INNOVATION FESTIVAL</text>
+  <text x="154" y="555" fill="#ffffff" font-family="system-ui, sans-serif" font-size="30" opacity=".85">扫码入场 · 实时确认 · 安全有序</text>
+</svg>
