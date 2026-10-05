@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>活动签到大屏</title>
+<style>
+  :root { --bg:#0b3d91; --fg:#fff; --accent:#ffd166; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body { height:100%; overflow:hidden; font-family:"PingFang SC","Microsoft YaHei",sans-serif; }
+  #stage { position:fixed; inset:0; display:flex; flex-direction:column;
+           background:var(--bg); color:var(--fg); transition:background .4s; }
+  /* 主视觉图层：图片加载失败时自动隐藏，保留渐变底与签到功能 */
+  #visual { position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
+            opacity:.35; z-index:0; }
+  #visual.broken { display:none; }
+  #fallback { position:absolute; inset:0; z-index:0; display:none;
+              background:linear-gradient(135deg, var(--bg), #12264f 70%); }
+  #fallback.show { display:block; }
+  .layer { position:relative; z-index:1; }
+  header { padding:2.2vmin 4vmin; display:flex; justify-content:space-between;
+           align-items:baseline; }
+  #title { font-size:4.2vmin; font-weight:700; letter-spacing:.2vmin; }
+  #clock { font-size:2.4vmin; opacity:.85; font-variant-numeric:tabular-nums; }
+  main { flex:1; display:flex; align-items:center; justify-content:center;
+         gap:8vmin; padding:0 6vmin; }
+  .card { text-align:center; }
+  .num { font-size:26vmin; font-weight:800; line-height:1.05;
+         font-variant-numeric:tabular-nums; text-shadow:0 .6vmin 2vmin rgba(0,0,0,.35); }
+  .num.bump { animation:bump .45s ease; }
+  @keyframes bump { 40% { transform:scale(1.12); color:var(--accent); } }
+  .label { font-size:3vmin; opacity:.9; margin-top:1vmin; }
+  .sub { font-size:9vmin; font-weight:700; color:var(--accent);
+         font-variant-numeric:tabular-nums; }
+  .divider { width:.4vmin; align-self:stretch;
+             background:linear-gradient(transparent,rgba(255,255,255,.5),transparent); }
+  footer { padding:1.6vmin 4vmin; display:flex; justify-content:space-between;
+           font-size:2vmin; opacity:.75; }
+  #net { padding:.4vmin 1.2vmin; border-radius:2vmin; background:rgba(255,255,255,.15); }
+  #net.off { background:#c0392b; }
+  /* 屏幕旋转（竖屏）自适应：发布主视觉/旋转时布局即时重排，状态不丢失 */
+  @media (orientation: portrait) {
+    main { flex-direction:column; gap:4vmin; }
+    .divider { width:60%; height:.4vmin; align-self:center;
+               background:linear-gradient(90deg,transparent,rgba(255,255,255,.5),transparent); }
+    .num { font-size:32vmin; }
+  }
+</style>
+</head>
+<body>
+<div id="stage">
+  <img id="visual" alt="" src="">
+  <div id="fallback"></div>
+  <header class="layer">
+    <div id="title">活动签到</div>
+    <div id="clock">--:--:--</div>
+  </header>
+  <main class="layer">
+    <div class="card">
+      <div class="num" id="confirmed">0</div>
+      <div class="label">确认人数</div>
+    </div>
+    <div class="divider"></div>
+    <div class="card">
+      <div class="sub" id="tentative">0</div>
+      <div class="label">暂定人数（含待确认 <span id="pending">0</span>）</div>
+    </div>
+  </main>
+  <footer class="layer">
+    <span id="sessionInfo">等待场次开始…</span>
+    <span id="net">已连接</span>
+  </footer>
+</div>
+<script>
+/* 大屏只渲染场次名与人数，绝不接收/展示任何个人敏感信息 */
+const $ = id => document.getElementById(id);
+let lastVisualVer = -1, lastSessionId = null, netOk = true;
+
+function setVisual(v) {
+  const img = $('visual'), fb = $('fallback');
+  if (!v) { img.classList.add('broken'); fb.classList.add('show'); return; }
+  document.documentElement.style.setProperty('--bg', v.bg_color || '#0b3d91');
+  $('title').textContent = v.title || '活动签到';
+  if (v.version !== lastVisualVer) {          // 原子切换：版本变化才换图
+    lastVisualVer = v.version;
+    if (v.image_url) {
+      img.classList.remove('broken'); fb.classList.remove('show');
+      img.src = v.image_url;                  // onerror 时降级，签到不受影响
+    } else {
+      img.classList.add('broken'); fb.classList.add('show');
+    }
+  }
+}
+$('visual').addEventListener('error', () => { // 图片资源损坏 → 降级背景
+  $('visual').classList.add('broken'); $('fallback').classList.add('show');
+});
+$('visual').addEventListener('load', () => {
+  $('visual').classList.remove('broken'); $('fallback').classList.remove('show');
+});
+
+function bump(el, val) {
+  if (el.textContent !== String(val)) {
+    el.textContent = val;
+    el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump');
+  }
+}
+
+async function poll() {
+  try {
+    const r = await fetch('/api/screen/state', {cache:'no-store'});
+    const s = await r.json();
+    if (!netOk) { netOk = true; $('net').textContent='已连接'; $('net').classList.remove('off'); }
+    setVisual(s.visual);
+    if (s.session) {
+      lastSessionId = s.session.id;
+      $('sessionInfo').textContent = '当前场次：' + s.session.name;
+      bump($('confirmed'), s.counts.confirmed);          // 确认人数
+      bump($('tentative'), s.counts.tentative_total);    // 暂定人数
+      $('pending').textContent = s.counts.tentative_pending;
+    } else {
+      $('sessionInfo').textContent = '等待场次开始…';
+      bump($('confirmed'), 0); bump($('tentative'), 0); $('pending').textContent = 0;
+    }
+  } catch (e) {   // 断网保持最后画面，签到链路不受影响
+    if (netOk) { netOk = false; $('net').textContent='连接中断 · 保持显示'; $('net').classList.add('off'); }
+  }
+}
+setInterval(poll, 2000); poll();
+setInterval(() => { $('clock').textContent = new Date().toLocaleTimeString('zh-CN'); }, 500);
+/* 旋转/尺寸变化时仅重排，不重置任何状态 */
+window.addEventListener('orientationchange', () => setTimeout(() => {}, 60));
+</script>
+</body>
+</html>

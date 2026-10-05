@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>签到工作台</title>
+<style>
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:"PingFang SC","Microsoft YaHei",sans-serif;
+         background:#f4f6fa; color:#222; }
+  header { background:#0b3d91; color:#fff; padding:12px 24px; display:flex;
+           align-items:center; gap:20px; flex-wrap:wrap; }
+  header h1 { font-size:18px; margin:0; }
+  header a { color:#cfe0ff; font-size:13px; }
+  nav { display:flex; gap:4px; background:#e7ecf5; padding:6px 12px; flex-wrap:wrap; }
+  nav button { border:0; background:transparent; padding:8px 14px; cursor:pointer;
+               border-radius:6px; font-size:14px; }
+  nav button.on { background:#0b3d91; color:#fff; }
+  section { display:none; padding:18px 24px; }
+  section.on { display:block; }
+  .card { background:#fff; border-radius:10px; padding:16px 18px; margin-bottom:16px;
+          box-shadow:0 1px 4px rgba(0,0,0,.06); }
+  .card h3 { margin:0 0 12px; font-size:15px; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th,td { padding:7px 9px; border-bottom:1px solid #eef1f6; text-align:left;
+          vertical-align:top; }
+  th { color:#667; font-weight:600; white-space:nowrap; }
+  input,textarea,select { padding:7px 9px; border:1px solid #ccd4e0; border-radius:6px;
+                          font-size:13px; font-family:inherit; }
+  button.act { background:#0b3d91; color:#fff; border:0; padding:7px 14px;
+               border-radius:6px; cursor:pointer; font-size:13px; }
+  button.act.sub { background:#eef1f6; color:#234; }
+  button.act.warn { background:#c0392b; }
+  button.act:disabled { opacity:.4; cursor:default; }
+  .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  .pill { display:inline-block; padding:2px 9px; border-radius:10px; font-size:12px; }
+  .p-confirmed { background:#e3f5e9; color:#187a3d; }
+  .p-tentative { background:#fff4d6; color:#8a6d00; }
+  .p-conflict  { background:#fde3e0; color:#b03024; }
+  .p-duplicate,.p-rejected { background:#eceff3; color:#667; }
+  .mono { font-family:ui-monospace,Consolas,monospace; font-size:12px; }
+  .num { font-weight:700; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+          gap:10px; }
+  .stat { background:#f7f9fc; border-radius:8px; padding:10px 12px; }
+  .stat b { font-size:22px; display:block; }
+  .stat span { font-size:12px; color:#667; }
+  #toast { position:fixed; right:18px; bottom:18px; background:#223; color:#fff;
+           padding:10px 16px; border-radius:8px; opacity:0; transition:.3s;
+           max-width:60vw; font-size:13px; }
+  pre { background:#0f1722; color:#cde3ff; padding:12px; border-radius:8px;
+        overflow:auto; font-size:12px; max-height:300px; }
+  .muted { color:#889; font-size:12px; }
+  img.preview { max-width:280px; max-height:140px; border-radius:8px; display:block;
+                margin-top:8px; }
+  .imgfb { display:none; padding:24px; background:#dfe6f2; border-radius:8px;
+           color:#456; margin-top:8px; max-width:280px; text-align:center; }
+</style>
+</head>
+<body>
+<header>
+  <h1>校园活动签到 · 工作台</h1>
+  <a href="/screen" target="_blank">打开大屏 ↗</a>
+  <span class="muted" id="now"></span>
+</header>
+<nav id="tabs">
+  <button data-t="sessions" class="on">场次管理</button>
+  <button data-t="checkin">签到与撤销</button>
+  <button data-t="conflict">冲突处置与重算</button>
+  <button data-t="devices">设备同步</button>
+  <button data-t="visual">主视觉发布</button>
+</nav>
+
+<section id="t-sessions" class="on">
+  <div class="card">
+    <h3>新建场次</h3>
+    <div class="row">
+      <input id="sName" placeholder="场次名称，如：迎新晚会 · 第一场" size="30">
+      <input id="sStart" type="datetime-local">
+      <input id="sEnd" type="datetime-local">
+      <button class="act" onclick="createSession()">创建</button>
+    </div>
+  </div>
+  <div class="card">
+    <h3>场次列表（确认 / 暂定分列；换场为原子切换，旧场自动封场）</h3>
+    <table id="sessTable">
+      <thead><tr><th>名称</th><th>状态</th><th>资格</th><th>确认人数</th>
+        <th>暂定人数</th><th>待确认</th><th>已撤销</th><th>待处置冲突</th><th>操作</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <div class="card">
+    <h3>导入参与资格 / 签发离线票据</h3>
+    <div class="row">
+      <select id="eligSess"></select>
+      <textarea id="eligIds" rows="3" cols="30" placeholder="学号列表，逗号或换行分隔"></textarea>
+      <button class="act" onclick="importElig()">导入资格</button>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <input id="tkPid" placeholder="学号" size="14">
+      <input id="tkSecs" type="number" value="14400" style="width:90px" title="有效秒数">
+      <button class="act sub" onclick="issueTicket()">签发票据</button>
+      <span class="muted">票据绑定场次与有效时间窗，换场后旧票据无法计入新场次</span>
+    </div>
+    <div class="mono" id="ticketOut" style="margin-top:8px;word-break:break-all"></div>
+  </div>
+</section>
+
+<section id="t-checkin">
+  <div class="card">
+    <h3>扫码模拟（验收用）</h3>
+    <div class="row">
+      <input id="devId" value="dev-A" size="10" title="设备ID">
+      <input id="scanTicket" placeholder="粘贴票据（在线扫码）" size="46">
+      <button class="act" onclick="onlineScan()">在线扫码</button>
+      <button class="act sub" onclick="offlineScan()">离线暂存</button>
+      <button class="act sub" onclick="mergeQueue()">联网合并暂存队列</button>
+      <span class="muted" id="queueInfo">暂存 0 条</span>
+    </div>
+    <pre id="scanResult">结果输出…</pre>
+  </div>
+  <div class="card">
+    <h3>补签（管理员手工补录，独立 SUPPLEMENT 事件）</h3>
+    <div class="row">
+      <select id="opSess"></select>
+      <input id="supPid" placeholder="学号" size="14">
+      <button class="act" onclick="supplement()">补签</button>
+      <button class="act sub" onclick="confirmAll()">确认全部暂定 → 计入确认人数</button>
+    </div>
+  </div>
+  <div class="card">
+    <h3>事件流（签到/补签/撤销/再次入场均为独立事件，可撤销）</h3>
+    <table id="evTable">
+      <thead><tr><th>seq</th><th>类型</th><th>状态</th><th>学号</th><th>设备</th>
+        <th>来源</th><th>客户端时间</th><th>服务端时间</th><th>备注</th><th>操作</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</section>
+
+<section id="t-conflict">
+  <div class="card">
+    <h3>待处置冲突（撤销后迟到的旧签到 / 封场后迟到的离线队列）</h3>
+    <table id="cfTable">
+      <thead><tr><th>seq</th><th>场次</th><th>学号</th><th>类型</th><th>扫码时间</th>
+        <th>到达时间</th><th>原因</th><th>处置</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <div class="card">
+    <h3>重算（按事件流重建人数，用于对账与纠错）</h3>
+    <div class="row">
+      <select id="rcSess"></select>
+      <button class="act" onclick="recalc()">重算该场次</button>
+    </div>
+    <pre id="rcResult">重算报告…</pre>
+  </div>
+</section>
+
+<section id="t-devices">
+  <div class="card">
+    <h3>设备同步进度（last_seq 为设备已同步的事件游标，lag 为落后量）</h3>
+    <div class="row">
+      <input id="newDev" placeholder="新设备名" size="14">
+      <button class="act sub" onclick="regDevice()">注册设备</button>
+      <button class="act sub" onclick="pullFeed()">模拟设备拉取事件流</button>
+    </div>
+    <table id="devTable" style="margin-top:12px">
+      <thead><tr><th>设备</th><th>名称</th><th>last_seq</th><th>lag</th>
+        <th>最近拉取</th><th>最近上报</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <pre id="feedResult">事件流…</pre>
+  </div>
+</section>
+
+<section id="t-visual">
+  <div class="card">
+    <h3>发布主视觉（版本化原子发布；大屏旋转时布局自适应，不中断签到）</h3>
+    <div class="row">
+      <select id="visSess"><option value="">（全局默认）</option></select>
+      <input id="visTitle" placeholder="主标题" size="20">
+      <input id="visImg" placeholder="图片 URL（可留空用纯色背景）" size="34">
+      <input id="visColor" type="color" value="#0b3d91">
+      <button class="act" onclick="publishVisual()">发布</button>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <span class="muted">预览（图片损坏时大屏自动降级为渐变背景，签到保持可操作）：</span>
+    </div>
+    <img class="preview" id="visPreview" style="display:none"
+         onerror="this.style.display='none';document.getElementById('visFb').style.display='block'"
+         onload="this.style.display='block';document.getElementById('visFb').style.display='none'">
+    <div class="imgfb" id="visFb">图片不可用 · 已降级为背景色 + 标题</div>
+  </div>
+</section>
+
+<div id="toast"></div>
+<script>
+const $ = id => document.getElementById(id);
+const api = async (p, opt) => {
+  const r = await fetch(p, opt ? {method:'POST', headers:{'Content-Type':'application/json'},
+                                  body:JSON.stringify(opt)} : undefined);
+  const j = await r.json();
+  if (!j.ok) throw new Error(j.error || r.status);
+  return j;
+};
+const toast = m => { const t=$('toast'); t.textContent=m; t.style.opacity=1;
+                     setTimeout(()=>t.style.opacity=0, 2600); };
+const esc = s => String(s??'').replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const uuid = () => crypto.randomUUID().replace(/-/g,'');
+
+let sessions = [], offlineQueue = JSON.parse(localStorage.getItem('ckQueue')||'[]');
+
+/* ---------- 通用刷新 ---------- */
+async function refreshSessions() {
+  const j = await api('/api/sessions');
+  sessions = j.sessions;
+  const tb = document.querySelector('#sessTable tbody');
+  tb.innerHTML = sessions.map(s => `<tr>
+    <td>${esc(s.name)}${s.is_current?' <span class="pill p-confirmed">当前</span>':''}</td>
+    <td>${s.status}</td><td>${s.eligible}</td>
+    <td class="num">${s.counts.confirmed}</td>
+    <td class="num">${s.counts.tentative_total}</td>
+    <td>${s.counts.tentative_pending}</td>
+    <td>${s.counts.revoked}</td>
+    <td>${s.conflicts_pending?`<span class="pill p-conflict">${s.conflicts_pending}</span>`:0}</td>
+    <td>${s.is_current?'':`<button class="act sub" onclick="activate('${s.id}')">切换为当前</button>`}
+        ${s.status!=='closed'?`<button class="act warn" onclick="closeSess('${s.id}')">封场</button>`:''}</td>
+  </tr>`).join('');
+  const opts = sessions.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('');
+  for (const id of ['eligSess','opSess','rcSess']) {
+    const el=$(id), cur=el.value; el.innerHTML=opts; el.value=cur|| (sessions.find(s=>s.is_current)||sessions[0]||{}).id || '';
+  }
+  $('visSess').innerHTML = '<option value="">（全局默认）</option>' + opts;
+}
+async function refreshEvents() {
+  const sid = $('opSess').value; if (!sid) return;
+  const j = await api('/api/events?session_id='+sid+'&limit=200');
+  document.querySelector('#evTable tbody').innerHTML = j.events.map(e => `<tr>
+    <td>${e.seq}</td><td>${e.type}</td>
+    <td><span class="pill p-${e.status}">${e.status}</span>${e.resolution?`(${e.resolution})`:''}</td>
+    <td class="mono">${esc(e.person_id)}</td><td class="mono">${esc(e.device_id||'')}</td>
+    <td>${e.source}</td><td class="mono">${esc(e.client_ts||'')}</td>
+    <td class="mono">${esc(e.server_ts)}</td><td>${esc(e.note||'')}</td>
+    <td>${(e.type==='CHECKIN'||e.type==='SUPPLEMENT'||e.type==='REENTRY')&&e.status!=='duplicate'
+        ?`<button class="act warn" onclick="revoke('${esc(e.person_id)}')">撤销</button>`:''}</td>
+  </tr>`).join('');
+}
+async function refreshConflicts() {
+  const j = await api('/api/admin/conflicts');
+  document.querySelector('#cfTable tbody').innerHTML = j.conflicts.map(c => `<tr>
+    <td>${c.seq}</td><td class="mono">${esc(nameOf(c.session_id))}</td>
+    <td class="mono">${esc(c.person_id)}</td><td>${c.type}</td>
+    <td class="mono">${esc(c.client_ts||'')}</td><td class="mono">${esc(c.server_ts)}</td>
+    <td>${esc(c.note)}</td>
+    <td><button class="act" onclick="resolve('${c.event_id}','accept')">接受为再次入场</button>
+        <button class="act warn" onclick="resolve('${c.event_id}','reject')">驳回</button></td>
+  </tr>`).join('') || '<tr><td colspan=8 class="muted">暂无待处置冲突</td></tr>';
+}
+async function refreshDevices() {
+  const j = await api('/api/devices');
+  document.querySelector('#devTable tbody').innerHTML = j.devices.map(d => `<tr>
+    <td class="mono">${esc(d.id)}</td><td>${esc(d.name)}</td><td>${d.last_seq}</td>
+    <td>${d.lag>0?`<span class="pill p-tentative">${d.lag}</span>`:0}</td>
+    <td class="mono">${esc(d.last_sync_at||'')}</td><td class="mono">${esc(d.last_push_at||'')}</td>
+  </tr>`).join('') || '<tr><td colspan=6 class="muted">暂无设备</td></tr>';
+}
+const nameOf = id => (sessions.find(s=>s.id===id)||{}).name || id;
+async function refreshAll() {
+  await refreshSessions();
+  await Promise.all([refreshEvents(), refreshConflicts(), refreshDevices()]);
+}
+
+/* ---------- 场次 ---------- */
+async function createSession() {
+  if (!$('sName').value) return toast('请填写场次名称');
+  await api('/api/sessions', {name:$('sName').value,
+    starts_at:$('sStart').value||null, ends_at:$('sEnd').value||null});
+  toast('已创建'); refreshAll();
+}
+async function activate(id) {
+  const j = await api(`/api/sessions/${id}/activate`);
+  toast(`已原子切换场次，当前确认 ${j.counts.confirmed} / 暂定 ${j.counts.tentative_total}`);
+  refreshAll();
+}
+async function closeSess(id) { await api(`/api/sessions/${id}/close`); toast('已封场'); refreshAll(); }
+async function importElig() {
+  const ids = $('eligIds').value.split(/[\s,，]+/).filter(Boolean);
+  if (!ids.length) return toast('请填写学号列表');
+  await api(`/api/sessions/${$('eligSess').value}/eligibility`, {person_ids:ids});
+  toast(`已导入 ${ids.length} 条资格`); refreshAll();
+}
+async function issueTicket() {
+  const j = await api('/api/tickets', {session_id:$('eligSess').value,
+    person_id:$('tkPid').value, valid_seconds:+$('tkSecs').value, auto_grant:true});
+  $('ticketOut').textContent = j.ticket;
+  $('scanTicket').value = j.ticket;
+  toast('票据已签发并填入扫码框');
+}
+
+/* ---------- 签到 ---------- */
+async function onlineScan() {
+  const body = {event_id:uuid(), device_id:$('devId').value, ticket:$('scanTicket').value,
+                client_ts:new Date().toISOString()};
+  const j = await api('/api/checkin', body);
+  $('scanResult').textContent = JSON.stringify(j, null, 2);
+  window._lastEventId = body.event_id;   // 供“终端重试”验收复用
+  refreshAll();
+}
+function offlineScan() {
+  offlineQueue.push({event_id:uuid(), ticket:$('scanTicket').value,
+                     client_ts:new Date().toISOString()});
+  localStorage.setItem('ckQueue', JSON.stringify(offlineQueue));
+  $('queueInfo').textContent = `暂存 ${offlineQueue.length} 条`;
+  toast('已离线暂存（未计入任何人数）');
+}
+async function mergeQueue() {
+  if (!offlineQueue.length) return toast('暂存队列为空');
+  const j = await api('/api/sync/merge', {device_id:$('devId').value, events:offlineQueue});
+  $('scanResult').textContent = JSON.stringify(j, null, 2);
+  offlineQueue = []; localStorage.setItem('ckQueue','[]');
+  $('queueInfo').textContent = '暂存 0 条';
+  refreshAll();
+}
+async function supplement() {
+  const j = await api('/api/admin/supplement', {session_id:$('opSess').value,
+    person_id:$('supPid').value});
+  toast('补签结果：'+j.result.status); refreshAll();
+}
+async function revoke(pid) {
+  const j = await api('/api/admin/revoke', {session_id:$('opSess').value, person_id:pid,
+    reason:'工作台撤销'});
+  toast('撤销结果：'+j.result.status); refreshAll();
+}
+async function confirmAll() {
+  const j = await api('/api/admin/confirm', {session_id:$('opSess').value});
+  toast(`已确认 ${j.events_promoted} 条暂定 → 确认人数 ${j.counts.confirmed}`);
+  refreshAll();
+}
+
+/* ---------- 冲突与重算 ---------- */
+async function resolve(eid, action) {
+  const j = await api('/api/admin/conflicts/resolve', {event_id:eid, action});
+  $('rcResult').textContent = JSON.stringify(j.recalculate, null, 2);
+  toast('冲突已处置并完成重算'); refreshAll();
+}
+async function recalc() {
+  const j = await api('/api/admin/recalculate', {session_id:$('rcSess').value});
+  $('rcResult').textContent = JSON.stringify(j.recalculate, null, 2);
+  toast('重算完成'); refreshAll();
+}
+
+/* ---------- 设备 ---------- */
+async function regDevice() {
+  await api('/api/devices/register', {name:$('newDev').value||('dev-'+Date.now())});
+  toast('设备已注册'); refreshDevices();
+}
+async function pullFeed() {
+  const did = $('devId').value;
+  const cur = await api('/api/sync/events?device_id='+did+'&since=0');
+  $('feedResult').textContent = JSON.stringify(cur, null, 2);
+  refreshDevices();
+}
+
+/* ---------- 主视觉 ---------- */
+async function publishVisual() {
+  const j = await api('/api/visuals/publish', {session_id:$('visSess').value||null,
+    title:$('visTitle').value, image_url:$('visImg').value, bg_color:$('visColor').value});
+  toast('主视觉已发布 v'+j.version+'（大屏下一拍原子生效）');
+}
+$('visImg').addEventListener('input', e => {
+  const img = $('visPreview');
+  if (e.target.value) { img.src = e.target.value; }
+  else { img.style.display='none'; $('visFb').style.display='block'; }
+});
+
+/* ---------- 框架 ---------- */
+document.querySelectorAll('#tabs button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('#tabs button').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('section').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); $('t-'+b.dataset.t).classList.add('on');
+});
+setInterval(() => $('now').textContent = new Date().toLocaleString('zh-CN'), 1000);
+$('queueInfo').textContent = `暂存 ${offlineQueue.length} 条`;
+refreshAll();
+setInterval(refreshConflicts, 5000);
+</script>
+</body>
+</html>
